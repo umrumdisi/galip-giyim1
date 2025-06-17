@@ -7,22 +7,27 @@ import HomeSlider from './components/HomeSlider'
 import SearchBar from './components/SearchBar'
 import AboutSection from './components/AboutSection'
 import ProductCard from './components/ProductCard'
-import { CATEGORIES } from './constants/categories'
 
 interface Product {
-  id: number
+  id: string
   name: string
   description: string
   price: number
   stock: number
   imageUrl: string
-  categoryId: number
+  categoryId: string
   slug: string
+}
+
+interface Category {
+  id: string
+  name: string
 }
 
 export default function Home() {
   const [products, setProducts] = useState<Product[]>([])
-  const [selectedCategory, setSelectedCategory] = useState<number | null>(null)
+  const [categories, setCategories] = useState<Category[]>([])
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { data: session } = useSession()
@@ -31,7 +36,7 @@ export default function Home() {
 
   useEffect(() => {
     if (categoryId) {
-      setSelectedCategory(Number(categoryId))
+      setSelectedCategory(categoryId)
     }
   }, [categoryId])
 
@@ -55,9 +60,17 @@ export default function Home() {
         setIsLoading(false)
       }
     }
-
     fetchProducts()
   }, [])
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      const res = await fetch('/api/categories');
+      const data = await res.json();
+      setCategories(data);
+    };
+    fetchCategories();
+  }, []);
 
   const filteredProducts = selectedCategory
     ? products.filter((product) => product.categoryId === selectedCategory)
@@ -82,7 +95,7 @@ export default function Home() {
             >
               Tüm Ürünler
             </button>
-            {CATEGORIES.map((category) => (
+            {categories.map((category) => (
               <button
                 key={category.id}
                 onClick={() => setSelectedCategory(category.id)}

@@ -7,15 +7,15 @@ import Image from 'next/image';
 import { toast } from 'react-hot-toast';
 
 interface Product {
-  id: number;
+  id: string;
   name: string;
   description: string;
   price: number;
   stock: number;
   imageUrl: string;
-  categoryId: number;
+  categoryId: string;
   category: {
-    id: number;
+    id: string;
     name: string;
   };
 }

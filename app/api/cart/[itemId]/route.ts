@@ -25,7 +25,7 @@ export async function DELETE(
 
     const cartItem = await prisma.cartItem.findFirst({
       where: {
-        id: parseInt(params.itemId),
+        id: params.itemId,
         cartId: user.cart.id
       }
     })

@@ -3,10 +3,9 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { toast } from 'react-hot-toast'
-import { CATEGORIES } from '@/app/constants/categories'
 
 interface Product {
-  id: number
+  id: string
   name: string
   description: string
   price: number
@@ -15,14 +14,20 @@ interface Product {
   categoryId: string
 }
 
+interface Category {
+  id: string
+  name: string
+}
+
 export default function EditProduct() {
   const router = useRouter()
   const params = useParams()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [imageFile, setImageFile] = useState<File | null>(null)
+  const [categories, setCategories] = useState<Category[]>([])
   const [formData, setFormData] = useState<Product>({
-    id: 0,
+    id: '',
     name: '',
     description: '',
     price: 0,
@@ -32,24 +37,32 @@ export default function EditProduct() {
   })
 
   useEffect(() => {
-    const fetchProduct = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch(`/api/products/${params.id}`)
-        if (!response.ok) {
+        // Kategorileri getir
+        const categoriesResponse = await fetch('/api/categories')
+        if (categoriesResponse.ok) {
+          const categoriesData = await categoriesResponse.json()
+          setCategories(categoriesData)
+        }
+
+        // Ürünü getir
+        const productResponse = await fetch(`/api/products/${params.id}`)
+        if (!productResponse.ok) {
           throw new Error('Ürün bulunamadı')
         }
-        const data = await response.json()
-        setFormData(data)
+        const productData = await productResponse.json()
+        setFormData(productData)
       } catch (error) {
-        console.error('Ürün yüklenirken hata:', error)
-        toast.error('Ürün yüklenirken bir hata oluştu')
+        console.error('Veri yüklenirken hata:', error)
+        toast.error('Veri yüklenirken bir hata oluştu')
         router.push('/admin/products')
       } finally {
         setLoading(false)
       }
     }
 
-    fetchProduct()
+    fetchData()
   }, [params.id, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -69,20 +82,43 @@ export default function EditProduct() {
       formDataToSend.append('stock', formData.stock.toString())
       formDataToSend.append('categoryId', formData.categoryId)
 
+      console.log('Form verileri gönderiliyor:', {
+        name: formData.name,
+        description: formData.description,
+        price: formData.price,
+        stock: formData.stock,
+        categoryId: formData.categoryId,
+        hasImage: !!imageFile
+      })
+
       const response = await fetch(`/api/products/${params.id}`, {
         method: 'PUT',
         body: formDataToSend,
       })
 
       if (!response.ok) {
-        throw new Error('Ürün güncellenemedi')
+        const errorData = await response.json()
+        console.error('API Hatası:', errorData)
+        
+        // Hata detaylarını kontrol et
+        if (errorData.error) {
+          throw new Error(errorData.error)
+        } else if (errorData.details) {
+          throw new Error(`${errorData.details}`)
+        } else {
+          throw new Error('Ürün güncellenemedi')
+        }
       }
 
+      const result = await response.json()
+      console.log('Başarılı güncelleme:', result)
+      
       toast.success('Ürün başarıyla güncellendi')
       router.push('/admin/products')
     } catch (error) {
       console.error('Ürün güncellenirken hata:', error)
-      toast.error('Ürün güncellenirken bir hata oluştu')
+      const errorMessage = error instanceof Error ? error.message : 'Ürün güncellenirken bir hata oluştu'
+      toast.error(errorMessage)
     } finally {
       setSaving(false)
     }
@@ -195,7 +231,7 @@ export default function EditProduct() {
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               >
                 <option value="">Kategori Seçin</option>
-                {CATEGORIES.map((category) => (
+                {categories.map((category) => (
                   <option key={category.id} value={category.id}>
                     {category.name}
                   </option>

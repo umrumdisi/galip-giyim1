@@ -6,7 +6,7 @@ import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
 
 interface Product {
-  id: number
+  id: string
   name: string
   description: string
   price: number
@@ -35,25 +35,33 @@ export default function AdminProducts() {
     }
   }
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
     if (!confirm('Bu ürünü silmek istediğinizden emin misiniz?')) {
       return
     }
 
     try {
+      console.log('Ürün silme isteği gönderiliyor:', id)
+      
       const response = await fetch(`/api/products/${id}`, {
         method: 'DELETE',
       })
 
       if (!response.ok) {
-        throw new Error('Ürün silinemedi')
+        const errorData = await response.json()
+        console.error('API Hatası:', errorData)
+        throw new Error(errorData.error || 'Ürün silinemedi')
       }
 
+      const result = await response.json()
+      console.log('Başarılı silme:', result)
+      
       toast.success('Ürün başarıyla silindi')
       fetchProducts()
     } catch (error) {
-      console.error('Ürün silinirken hata oluştu:', error)
-      toast.error('Ürün silinirken bir hata oluştu')
+      console.error('Ürün silinirken hata:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Ürün silinirken bir hata oluştu'
+      toast.error(errorMessage)
     }
   }
 

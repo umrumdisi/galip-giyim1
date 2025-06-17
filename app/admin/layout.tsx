@@ -15,7 +15,8 @@ const navigation = [
   { name: 'Dashboard', href: '/admin', icon: HomeIcon },
   { name: 'Ürünler', href: '/admin/products', icon: ShoppingBagIcon },
   { name: 'Müşteriler', href: '/admin/customers', icon: UserGroupIcon },
-  { name: 'Site Ayarları', href: '/admin/settings', icon: Cog6ToothIcon },
+  { name: 'Site Ayarları', href: '/admin/site-ayarlar', icon: Cog6ToothIcon },
+  { name: 'İletişim', href: '/admin/messages', icon: UserGroupIcon },
 ]
 
 export default function AdminLayout({

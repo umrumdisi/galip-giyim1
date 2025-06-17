@@ -31,6 +31,9 @@ export default async function RootLayout({
             <main>
               {children}
             </main>
+            <footer className="w-full py-6 text-center text-gray-400 text-sm border-t bg-white mt-12">
+              © 2024 Galip Giyim. Tüm hakları saklıdır.
+            </footer>
             <Toaster />
           </SessionProvider>
         </CartProvider>

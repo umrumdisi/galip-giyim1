@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'react-hot-toast'
 import { CATEGORIES } from '@/app/constants/categories'
@@ -16,6 +16,13 @@ export default function NewProduct() {
     stock: '',
     categoryId: ''
   })
+  const [categories, setCategories] = useState([]);
+
+  useEffect(() => {
+    fetch('/api/categories')
+      .then(res => res.json())
+      .then(data => setCategories(data));
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -166,7 +173,7 @@ export default function NewProduct() {
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               >
                 <option value="">Kategori Seçin</option>
-                {CATEGORIES.map((category) => (
+                {categories.map((category: any) => (
                   <option key={category.id} value={category.id}>
                     {category.name}
                   </option>

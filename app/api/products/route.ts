@@ -24,12 +24,13 @@ export async function GET() {
       }
     })
 
-    if (!products) {
-      console.error('Ürünler bulunamadı')
-      return NextResponse.json({ error: 'Ürünler bulunamadı' }, { status: 404 })
-    }
+    // categoryId'yi string olarak döndür
+    const fixedProducts = products.map((product) => ({
+      ...product,
+      categoryId: String(product.categoryId)
+    }));
 
-    return NextResponse.json(products)
+    return NextResponse.json(fixedProducts)
   } catch (error) {
     console.error('Ürünler getirilemedi:', error)
     if (error instanceof Prisma.PrismaClientInitializationError) {
@@ -104,7 +105,7 @@ export async function POST(request: Request) {
     // Sayısal değerleri kontrol et
     const numericPrice = parseFloat(price)
     const numericStock = parseInt(stock)
-    const numericCategoryId = parseInt(categoryId)
+    // categoryId artık string olarak kullanılacak
 
     if (isNaN(numericPrice) || numericPrice <= 0) {
       return NextResponse.json(
@@ -120,20 +121,13 @@ export async function POST(request: Request) {
       )
     }
 
-    if (isNaN(numericCategoryId)) {
-      return NextResponse.json(
-        { error: 'Geçerli bir kategori seçmelisiniz' },
-        { status: 400 }
-      )
-    }
-
     // Kategori kontrolü
     const category = await prisma.category.findUnique({
-      where: { id: numericCategoryId }
+      where: { id: categoryId }
     })
 
     if (!category) {
-      console.log('Kategori bulunamadı:', numericCategoryId)
+      console.log('Kategori bulunamadı:', categoryId)
       return NextResponse.json(
         { error: 'Seçilen kategori bulunamadı' },
         { status: 400 }
@@ -182,7 +176,7 @@ export async function POST(request: Request) {
         price: numericPrice,
         stock: numericStock,
         imageUrl: `/uploads/${fileName}`,
-        categoryId: numericCategoryId
+        categoryId: categoryId
       })
 
       let product;
@@ -194,7 +188,7 @@ export async function POST(request: Request) {
             price: numericPrice,
             stock: numericStock,
             imageUrl: `/uploads/${fileName}`,
-            categoryId: numericCategoryId
+            categoryId: categoryId
           },
           include: {
             category: true

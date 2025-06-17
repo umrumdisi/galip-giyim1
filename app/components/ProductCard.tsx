@@ -8,7 +8,7 @@ import { toast } from 'react-hot-toast'
 
 interface ProductCardProps {
   product: {
-    id: number
+    id: string
     name: string
     price: number
     oldPrice?: number
