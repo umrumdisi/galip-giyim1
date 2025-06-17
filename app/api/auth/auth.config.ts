@@ -15,10 +15,13 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
+          console.log('Email veya şifre eksik');
           throw new Error('Email ve şifre gerekli');
         }
 
         try {
+          console.log('Kullanıcı aranıyor:', credentials.email);
+          
           const user = await prisma.user.findUnique({
             where: { email: credentials.email }
           });
@@ -29,26 +32,50 @@ export const authOptions: NextAuthOptions = {
           }
 
           console.log('Kullanıcı bulundu:', {
+            id: user.id,
             email: user.email,
             role: user.role,
-            isAdmin: user.isAdmin
+            isAdmin: user.isAdmin,
+            passwordLength: user.password.length,
+            passwordStartsWith: user.password.substring(0, 10) + '...'
           });
 
+          // Şifre hash'li mi kontrol et
+          if (!user.password.startsWith('$2b$') && !user.password.startsWith('$2a$')) {
+            console.log('Şifre hash\'li değil, düz metin olarak karşılaştırılıyor');
+            if (user.password === credentials.password) {
+              console.log('Düz metin şifre eşleşti');
+              return {
+                id: user.id,
+                email: user.email,
+                name: user.name,
+                role: user.role,
+                isAdmin: user.isAdmin
+              };
+            } else {
+              console.log('Düz metin şifre eşleşmedi');
+              throw new Error('Geçersiz şifre');
+            }
+          }
+
+          console.log('Hash\'li şifre karşılaştırılıyor...');
           const isPasswordValid = await bcrypt.compare(
             credentials.password,
             user.password
           );
 
-          console.log('Şifre kontrolü:', {
+          console.log('Şifre kontrolü sonucu:', {
             isValid: isPasswordValid,
             providedPassword: credentials.password,
-            hashedPassword: user.password
+            hashedPasswordStart: user.password.substring(0, 20) + '...'
           });
 
           if (!isPasswordValid) {
+            console.log('Hash\'li şifre eşleşmedi');
             throw new Error('Geçersiz şifre');
           }
 
+          console.log('Giriş başarılı!');
           return {
             id: user.id,
             email: user.email,
@@ -66,6 +93,7 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
+        console.log('JWT callback - user:', user);
         return {
           ...token,
           id: user.id,
@@ -76,6 +104,7 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
     async session({ session, token }) {
+      console.log('Session callback - token:', token);
       return {
         ...session,
         user: {
@@ -90,6 +119,9 @@ export const authOptions: NextAuthOptions = {
   pages: {
     signIn: '/auth/signin',
   },
-  debug: process.env.NODE_ENV === 'development',
+  debug: true, // Debug'ı açık tutuyoruz
   secret: process.env.NEXTAUTH_SECRET || 'your-secret-key',
+  session: {
+    strategy: 'jwt',
+  },
 }; 
