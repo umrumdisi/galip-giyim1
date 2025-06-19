@@ -71,4 +71,31 @@ export async function POST(request: Request) {
     console.error('Sipariş oluşturulamadı:', error);
     return NextResponse.json({ error: error.message || 'Sipariş oluşturulamadı.' }, { status: 500 });
   }
+}
+
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const orderId = searchParams.get('id');
+  if (!orderId) {
+    return NextResponse.json({ error: 'Sipariş ID gerekli.' }, { status: 400 });
+  }
+  try {
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        user: { select: { name: true, email: true } },
+        items: {
+          include: {
+            product: { select: { name: true, description: true, price: true } }
+          }
+        }
+      }
+    });
+    if (!order) {
+      return NextResponse.json({ error: 'Sipariş bulunamadı.' }, { status: 404 });
+    }
+    return NextResponse.json(order);
+  } catch (error) {
+    return NextResponse.json({ error: 'Sipariş detayı alınamadı.' }, { status: 500 });
+  }
 } 
