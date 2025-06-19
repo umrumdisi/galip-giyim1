@@ -98,4 +98,20 @@ export async function GET(request: Request) {
   } catch (error) {
     return NextResponse.json({ error: 'Sipariş detayı alınamadı.' }, { status: 500 });
   }
+}
+
+export async function PUT(request: Request) {
+  try {
+    const { id, status } = await request.json();
+    if (!id || !status) {
+      return NextResponse.json({ error: 'Sipariş ID ve yeni durum gerekli.' }, { status: 400 });
+    }
+    const updated = await prisma.order.update({
+      where: { id },
+      data: { status },
+    });
+    return NextResponse.json({ success: true, order: updated });
+  } catch (error) {
+    return NextResponse.json({ error: 'Sipariş durumu güncellenemedi.' }, { status: 500 });
+  }
 } 

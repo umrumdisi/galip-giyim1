@@ -9,6 +9,7 @@ export default function OrderDetailPage() {
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -25,6 +26,24 @@ export default function OrderDetailPage() {
     };
     if (orderId) fetchOrder();
   }, [orderId]);
+
+  const updateStatus = async (status: string) => {
+    setUpdating(true);
+    try {
+      const res = await fetch(`/api/orders`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: orderId, status }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Durum güncellenemedi");
+      setOrder((prev: any) => ({ ...prev, status }));
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setUpdating(false);
+    }
+  };
 
   if (loading) {
     return <div className="p-8">Yükleniyor...</div>;
@@ -45,8 +64,28 @@ export default function OrderDetailPage() {
       <div className="mb-4">
         <strong>Müşteri:</strong> {order.user?.name || order.user?.email || "-"}
       </div>
-      <div className="mb-4">
-        <strong>Durum:</strong> {order.status}
+      <div className="mb-4 flex items-center gap-4">
+        <div>
+          <strong>Durum:</strong> {order.status}
+        </div>
+        {order.status === "PENDING" && (
+          <>
+            <button
+              className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+              onClick={() => updateStatus("APPROVED")}
+              disabled={updating}
+            >
+              Onayla
+            </button>
+            <button
+              className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
+              onClick={() => updateStatus("REJECTED")}
+              disabled={updating}
+            >
+              Reddet
+            </button>
+          </>
+        )}
       </div>
       <div className="mb-4">
         <strong>Toplam Tutar:</strong> {order.totalAmount} TL
