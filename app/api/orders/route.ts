@@ -22,34 +22,53 @@ export async function POST(request: Request) {
     if (userEmail) {
       user = await prisma.user.findUnique({ where: { email: userEmail } });
     }
+    if (!user) {
+      return NextResponse.json({ error: 'Sipariş oluşturmak için giriş yapmalısınız.' }, { status: 401 });
+    }
 
     // Sipariş toplamını hesapla
     const totalAmount = items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
 
-    // Siparişi oluştur
-    const order = await prisma.order.create({
-      data: {
-        userId: user ? user.id : undefined,
-        customerName: fullName,
-        address,
-        totalAmount,
-        status: 'PENDING',
-        items: {
-          create: items.map((item: any) => ({
-            productId: item.id,
-            quantity: item.quantity,
-            price: item.price
-          }))
+    // Transaction başlat
+    const result = await prisma.$transaction(async (tx) => {
+      // Stok kontrolü ve güncelleme
+      for (const item of items) {
+        const product = await tx.product.findUnique({ where: { id: item.id } });
+        if (!product) {
+          throw new Error('Ürün bulunamadı: ' + item.id);
         }
-      },
-      include: {
-        items: true
+        if (product.stock < item.quantity) {
+          throw new Error(`'${product.name}' ürünü için yeterli stok yok.`);
+        }
+        await tx.product.update({
+          where: { id: item.id },
+          data: { stock: product.stock - item.quantity }
+        });
       }
+      // Siparişi oluştur
+      const order = await tx.order.create({
+        data: {
+          userId: user.id,
+          totalAmount,
+          status: 'PENDING',
+          items: {
+            create: items.map((item: any) => ({
+              productId: item.id,
+              quantity: item.quantity,
+              price: item.price
+            }))
+          }
+        },
+        include: {
+          items: true
+        }
+      });
+      return order;
     });
 
-    return NextResponse.json({ success: true, order });
-  } catch (error) {
+    return NextResponse.json({ success: true, order: result });
+  } catch (error: any) {
     console.error('Sipariş oluşturulamadı:', error);
-    return NextResponse.json({ error: 'Sipariş oluşturulamadı.' }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Sipariş oluşturulamadı.' }, { status: 500 });
   }
 } 
