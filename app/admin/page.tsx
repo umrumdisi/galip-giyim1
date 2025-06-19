@@ -152,7 +152,9 @@ export default function AdminDashboard() {
                   stats.recentOrders.map((order) => (
                     <div key={order.id} className="flex items-center text-sm text-gray-600">
                       <span className="w-4 h-4 rounded-full bg-blue-100 mr-2 flex-shrink-0" />
-                      {order.customerName} - Sipariş #{order.id}
+                      <a href={`/admin/orders/${order.id}`} className="text-indigo-600 hover:underline">
+                        {order.customerName} - Sipariş #{order.id}
+                      </a>
                       <span className="ml-auto text-xs text-gray-400">
                         {new Date(order.date).toLocaleDateString('tr-TR')}
                       </span>
