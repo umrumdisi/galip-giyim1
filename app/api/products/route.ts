@@ -6,6 +6,7 @@ import { Prisma } from '@prisma/client'
 import { writeFile } from 'fs/promises'
 import { join } from 'path'
 import { existsSync, mkdirSync } from 'fs'
+import { uploadImage } from '@/app/lib/uploadImage'
 
 // Tüm ürünleri getir
 export async function GET() {
@@ -134,40 +135,12 @@ export async function POST(request: Request) {
       )
     }
 
-    let filePath: string | undefined;
     // Görsel işleme
     try {
       console.log('Görsel işleniyor...')
-      const bytes = await image.arrayBuffer()
-      const buffer = Buffer.from(bytes)
-      console.log('Görsel boyutu:', buffer.length, 'bytes')
-
-      if (buffer.length > 5 * 1024 * 1024) { // 5MB limit
-        return NextResponse.json(
-          { error: 'Görsel boyutu 5MB\'dan büyük olamaz' },
-          { status: 400 }
-        )
-      }
-
-      // uploads klasörünü kontrol et
-      const uploadDir = join(process.cwd(), 'public', 'uploads')
-      if (!existsSync(uploadDir)) {
-        console.log('Uploads klasörü oluşturuluyor...')
-        mkdirSync(uploadDir, { recursive: true })
-      }
-
-      // Dosya adı ve uzantı işlemleri
-      let fileExtension = image.name.split('.').pop()?.toLowerCase() || 'jpg'
-      if (!['jpg', 'jpeg', 'png', 'webp'].includes(fileExtension)) {
-        fileExtension = 'jpg'
-      }
-
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExtension}`
-      filePath = join(uploadDir, fileName)
-      
-      console.log('Dosya kaydediliyor:', filePath)
-      await writeFile(filePath, buffer)
-      console.log('Dosya başarıyla kaydedildi')
+      // Cloudinary'ye yükle
+      const imageUrl = await uploadImage(image)
+      console.log('Cloudinary URL:', imageUrl)
 
       // Veritabanına kaydet
       console.log('Veritabanına kaydediliyor...', {
@@ -175,7 +148,7 @@ export async function POST(request: Request) {
         description,
         price: numericPrice,
         stock: numericStock,
-        imageUrl: `/uploads/${fileName}`,
+        imageUrl: imageUrl,
         categoryId: categoryId
       })
 
@@ -187,7 +160,7 @@ export async function POST(request: Request) {
             description,
             price: numericPrice,
             stock: numericStock,
-            imageUrl: `/uploads/${fileName}`,
+            imageUrl: imageUrl,
             categoryId: categoryId
           },
           include: {
@@ -226,21 +199,7 @@ export async function POST(request: Request) {
         throw error // Diğer hataları üst catch bloğuna gönder
       }
     } catch (error) {
-      console.error('Dosya işleme veya veritabanı hatası:', error)
-      
-      // Dosya yüklendiyse ve veritabanı hatası olduysa dosyayı sil
-      if (filePath) {
-        try {
-          const fs = require('fs')
-          if (fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath)
-            console.log('Yüklenen dosya silindi:', filePath)
-          }
-        } catch (unlinkError) {
-          console.error('Dosya silinirken hata:', unlinkError)
-        }
-      }
-
+      console.error('Görsel yükleme veya veritabanı hatası:', error)
       return NextResponse.json(
         { 
           error: 'Ürün eklenirken bir hata oluştu',
