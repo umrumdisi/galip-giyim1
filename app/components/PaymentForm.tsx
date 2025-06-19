@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { toast } from 'react-hot-toast'
 import { CreditCardIcon, LockClosedIcon } from '@heroicons/react/24/outline'
+import { useCart } from '@/app/context/CartContext'
+import { useRouter } from 'next/navigation'
 
 interface PaymentFormData {
   fullName: string
@@ -22,6 +24,9 @@ export default function PaymentForm() {
   })
 
   const [errors, setErrors] = useState<Partial<PaymentFormData>>({})
+
+  const { items, clearCart } = useCart();
+  const router = useRouter();
 
   const validateForm = (): boolean => {
     const newErrors: Partial<PaymentFormData> = {}
@@ -95,14 +100,33 @@ export default function PaymentForm() {
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (validateForm()) {
-      toast.success('Ödemeniz başarıyla alındı')
-      // Burada gerçek ödeme işlemi yapılacak
+      // Sipariş oluşturma isteği
+      try {
+        const res = await fetch('/api/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            items,
+            address: formData.address,
+            fullName: formData.fullName
+          })
+        });
+        if (res.ok) {
+          toast.success('Siparişiniz başarıyla oluşturuldu!');
+          clearCart();
+          router.push('/'); // Ana sayfaya veya sipariş onay sayfasına yönlendir
+        } else {
+          const data = await res.json();
+          toast.error(data.error || 'Sipariş oluşturulamadı');
+        }
+      } catch (err) {
+        toast.error('Bir hata oluştu, lütfen tekrar deneyin.');
+      }
     }
-  }
+  };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
